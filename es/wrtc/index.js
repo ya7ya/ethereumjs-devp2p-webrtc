@@ -37,6 +37,7 @@ class WebRTCInitiator extends SimplePeer {
 
     let connected = false
     this.on('signal', (signal) => {
+      console.log('WebRTCInitiator:\tEmitting ss-handshake')
       sioClient.emit('ss-handshake', {
         intentId: intentId,
         fromId: this._id.toString(),
@@ -103,9 +104,10 @@ class WebRTCReciever extends EventEmitter {
     })
 
     this.io.on('ws-handshake', incomingConnction.bind(this))
-    this.io.on('ws-peer', this._peerDiscovered)
+    this.io.on('ws-peer', this._peerDiscovered.bind(this))
     this.io.on('connect', () => {
-      this.io.emit('ss-join', this._id.toString())
+      console.log('WebRTCReciever:\t on Connect, ourId: ', this._id.toString('hex'))
+      this.io.emit('ss-join', this._id.toString('hex'))
     })
 
     this.io.once('connect', () => {
@@ -146,6 +148,10 @@ class WebRTCReciever extends EventEmitter {
       this.emit('close')
       callback()
     })
+  }
+
+  _peerDiscovered (data) {
+    console.log('WebRTCReciever:\tPeer Discovered: ', data.toString('hex'))
   }
 }
 
