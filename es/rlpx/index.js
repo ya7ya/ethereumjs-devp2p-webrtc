@@ -1,4 +1,5 @@
-const net = require('net')
+// const net = require('net')
+const { WebRTCInitiator, WebRTCReciever } = require('../wrtc')
 const secp256k1 = require('secp256k1')
 const { EventEmitter } = require('events')
 const ms = require('ms')
@@ -41,7 +42,8 @@ class RLPx extends EventEmitter {
     }
 
     // internal
-    this._server = net.createServer()
+    // this._server = net.createServer()
+    this._server = new WebRTCReciever({id: this._id, trickle: false})
     this._server.once('listening', () => this.emit('listening'))
     this._server.once('close', () => this.emit('close'))
     this._server.on('error', (err) => this.emit('error', err))
@@ -59,7 +61,8 @@ class RLPx extends EventEmitter {
     this._isAliveCheck()
     debug('call .listen')
 
-    this._server.listen(...args)
+    // this._server.listen(...args)
+    this._server.listen({id: this._id})
   }
 
   destroy (...args) {
@@ -86,7 +89,8 @@ class RLPx extends EventEmitter {
     debug(`connect to ${peer.address}:${peer.port} (id: ${peerKey})`)
     const deferred = createDeferred()
 
-    const socket = new net.Socket()
+    // const socket = new net.Socket()
+    const socket = new WebRTCInitiator({initiator: true, id: this._id, trickle: false})
     this._peers.set(peerKey, socket)
     socket.once('close', () => {
       this._peers.delete(peerKey)
@@ -94,8 +98,9 @@ class RLPx extends EventEmitter {
     })
 
     socket.once('error', deferred.reject)
-    socket.setTimeout(this._timeout, () => deferred.reject(new Error('Connection timeout')))
-    socket.connect(peer.port, peer.address, deferred.resolve)
+    // socket.setTimeout(this._timeout, () => deferred.reject(new Error('Connection timeout')))
+    // socket.connect(peer.port, peer.address, deferred.resolve)
+    socket.connect(peer, deferred.resolve)
 
     await deferred.promise
     this._onConnect(socket, peer.id)

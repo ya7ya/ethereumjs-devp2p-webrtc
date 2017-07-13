@@ -1,5 +1,6 @@
 const { EventEmitter } = require('events')
-const dgram = require('dgram')
+// const dgram = require('dgram')
+const { WebRTCReciever } = require('../wrtc')
 const ms = require('ms')
 const createDebugLogger = require('debug')
 const LRUCache = require('lru-cache')
@@ -8,7 +9,7 @@ const { pk2id, createDeferred } = require('../util')
 
 const debug = createDebugLogger('devp2p:dpt:server')
 const VERSION = 0x04
-const createSocketUDP4 = dgram.createSocket.bind(null, 'udp4')
+// const createSocketUDP4 = dgram.createSocket.bind(null, 'udp4')
 
 class Server extends EventEmitter {
   constructor (dpt, privateKey, options) {
@@ -22,7 +23,8 @@ class Server extends EventEmitter {
     this._requests = new Map()
     this._requestsCache = new LRUCache({ max: 1000, maxAge: ms('1s'), stale: false })
 
-    const createSocket = options.createSocket || createSocketUDP4
+    // const createSocket = options.createSocket || createSocketUDP4
+    const createSocket = options.createSocket || new WebRTCReciever({id: this._dpt._id})
     this._socket = createSocket()
     this._socket.once('listening', () => this.emit('listening'))
     this._socket.once('close', () => this.emit('close'))
