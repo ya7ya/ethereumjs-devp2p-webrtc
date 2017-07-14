@@ -107,6 +107,7 @@ class WebRTCReciever extends EventEmitter {
   constructor (options) {
     super(options)
     this._id = options.id || null
+    this.wrtc = options.wrtc || null
     this.channels = {}
     // const sioUrl = 'http://localhost:9090/' // the socket io star server.
 
@@ -117,9 +118,14 @@ class WebRTCReciever extends EventEmitter {
 
   socket () {
     const intentId = (~~(Math.random() * 1e9)).toString(36) + Date.now()
-    this.channels[intentId] = new SimplePeer({initiator: true})
+    let spOptions = {initiator: true}
+    if (this.wrtc) {
+      spOptions.wrtc = this.wrtc
+    }
+    this.channels[intentId] = new SimplePeer(spOptions)
 
     this.channels[intentId].connect = (peer, callback) => {
+      console.log('WebRTC socket connecting ... ', peer.id.toString('hex'))
       let connected = false
       this.channels[intentId].once('signal', (signal) => {
         console.log('WebRTCInitiator:\tEmitting ss-handshake\n from:', this._id.toString('hex'),
@@ -158,7 +164,11 @@ class WebRTCReciever extends EventEmitter {
         this.channels[offer.intentId].signal(offer.signal)
       }
     } else {
-      this.channels[offer.intentId] = new SimplePeer({})
+      let spOptions = {}
+      if (this.wrtc) {
+        spOptions.wrtc = this.wrtc
+      }
+      this.channels[offer.intentId] = new SimplePeer(spOptions)
       this.channels[offer.intentId].on('connect', () => {
         console.log('WebRTCReciever: connected')
         this.emit('connection', this.channels[offer.intentId])

@@ -1,5 +1,6 @@
 // const net = require('net')
 const { WebRTCInitiator, WebRTCReciever } = require('../wrtc')
+const wrtc = require('electron-webrtc')()
 const secp256k1 = require('secp256k1')
 const { EventEmitter } = require('events')
 const ms = require('ms')
@@ -43,25 +44,23 @@ class RLPx extends EventEmitter {
 
     // internal
     // this._server = net.createServer()
-    this._server = new WebRTCReciever({id: this._id})
+    this._server = new WebRTCReciever({id: this._id, wrtc: wrtc})
     this._server.once('listening', () => this.emit('listening'))
     this._server.once('close', () => this.emit('close'))
     this._server.on('error', (err) => this.emit('error', err))
     this._server.on('connection', (socket) => this._onConnect(socket, null))
 
-    if (this._server instanceof WebRTCReciever) {
-      this._server.on('peer:new', (peer) => {
-        if (this._peersLRU.has(peer.id.toString('hex'))) return
-        this._peersLRU.set(peer.id.toString('hex'), true)
+    this._server.on('peer:new', (peer) => {
+      if (this._peersLRU.has(peer.id.toString('hex'))) return
+      this._peersLRU.set(peer.id.toString('hex'), true)
 
-        if (this._getOpenSlots() > 0) return this._connectToPeer(peer)
-        this._peersQueue.push({ peer: peer, ts: 0 }) // save to queue
-      })
-      this._server.on('peer:removed', (peer) => {
-        // remove from queue
-        this._peersQueue = this._peersQueue.filter((item) => !item.peer.id.equals(peer.id))
-      })
-    }
+      if (this._getOpenSlots() > 0) return this._connectToPeer(peer)
+      this._peersQueue.push({ peer: peer, ts: 0 }) // save to queue
+    })
+    this._server.on('peer:removed', (peer) => {
+      // remove from queue
+      this._peersQueue = this._peersQueue.filter((item) => !item.peer.id.equals(peer.id))
+    })
 
     this._peers = new Map()
     this._peersQueue = []
@@ -106,7 +105,8 @@ class RLPx extends EventEmitter {
     // const socket = new net.Socket()
     // const socket = new WebRTCInitiator({initiator: true, id: this._id})
     const socket = this._server.socket()
-    
+    console.log('RLPx:\tconnecting to peer ', peer.id.toString('hex'))
+
     this._peers.set(peerKey, socket)
     socket.once('close', () => {
       this._peers.delete(peerKey)
