@@ -19,7 +19,8 @@ class WebRTCInitiator extends SimplePeer {
     this._id = options.id
     const sioUrl = 'http://localhost:9090/' // the socket io star server.
 
-    this.io = io.connect(sioUrl, sioOptions)
+    // this.io = io.connect(sioUrl)
+    // this.io.on('ws-handshake', this.incoming.bind(this))
   }
 
   connect (peer, callback) {
@@ -28,20 +29,31 @@ class WebRTCInitiator extends SimplePeer {
 
     // const sioClient = this
     //       .listenersRefs[Object.keys(this.listenersRefs)[0]].io
-    const sioClient = this.io
+    // const sioClient = this.io
 
     // const spOptions = { initiator: true, trickle: false }
     //
     // // Use custom WebRTC implementation
     // if (this.wrtc) { spOptions.wrtc = this.wrtc }
+    const sioUrl = 'http://localhost:9090/' // the socket io star server.
+
+    this.io = io.connect(sioUrl, sioOptions)
+
+    this.io.once('connect_error', callback)
+    this.io.once('error', (err) => {
+      console.log('WebRTCInitiator:\t io error ', err)
+      this.emit('error', err)
+      this.emit('close')
+    })
 
     let connected = false
-    this.on('signal', (signal) => {
-      console.log('WebRTCInitiator:\tEmitting ss-handshake')
-      sioClient.emit('ss-handshake', {
+    this.once('signal', (signal) => {
+      console.log('WebRTCInitiator:\tEmitting ss-handshake\n from:', this._id.toString('hex'),
+      '\nto: ', peer.id.toString('hex'), '\n signal: ', signal)
+      this.io.emit('ss-handshake', {
         intentId: intentId,
-        fromId: this._id.toString(),
-        toId: peer.id.toString(),
+        fromId: this._id.toString('hex'),
+        toId: peer.id.toString('hex'),
         signal: signal
       })
     })
@@ -52,7 +64,10 @@ class WebRTCInitiator extends SimplePeer {
       if (!connected) { callback(err) }
     })
 
-    sioClient.on('ws-handshake', (offer) => {
+    this.io.on('ws-handshake', incomingHandshake.bind(this))
+
+    function incomingHandshake (offer) {
+      console.log('WebRTCInitiator:\t incoming handshake ', offer)
       if (offer.intentId === intentId && offer.err) {
         return callback(new Error(offer.err))
       }
@@ -61,24 +76,29 @@ class WebRTCInitiator extends SimplePeer {
         return
       }
 
-      this.once('connect', () => {
+      this.on('connect', () => {
         connected = true
         // conn.destroy = channel.destroy.bind(channel)
 
         // channel.once('close', () => this.emit('close'))
 
         // conn.getObservedAddrs = (callback) => callback(null, [ma])
-
+        console.log('WebRTCInitiator connected!')
         callback(null, this)
       })
-
+      console.log('WebRTCInitiator signaling ....')
       this.signal(offer.signal)
-    })
+    }
 
-    return this
+    // return this
+  }
+
+  incoming (offer) {
+    console.log('WebRTCInitiator:\t INCOMING ', offer)
   }
 
   end (onclose) {
+    console.log('WebRTCInitiator:\t ending Channel')
     this.destroy(onclose)
   }
 }
@@ -87,6 +107,137 @@ class WebRTCReciever extends EventEmitter {
   constructor (options) {
     super(options)
     this._id = options.id || null
+    this.channels = {}
+    // const sioUrl = 'http://localhost:9090/' // the socket io star server.
+
+    // this.io = io.connect(sioUrl, sioOptions)
+    // this.io.on('ws-handshake', this.incomingConnection.bind(this))
+
+  }
+
+  socket () {
+    const intentId = (~~(Math.random() * 1e9)).toString(36) + Date.now()
+    this.channels[intentId] = new SimplePeer({initiator: true})
+
+    this.channels[intentId].connect = (peer, callback) => {
+      let connected = false
+      this.channels[intentId].once('signal', (signal) => {
+        console.log('WebRTCInitiator:\tEmitting ss-handshake\n from:', this._id.toString('hex'),
+        '\nto: ', peer.id.toString('hex'), '\n signal: ', signal)
+        this.io.emit('ss-handshake', {
+          intentId: intentId,
+          fromId: this._id.toString('hex'),
+          toId: peer.id.toString('hex'),
+          signal: signal
+        })
+      })
+
+      this.channels[intentId].on('connect', () => {
+        connected = true
+        // conn.destroy = channel.destroy.bind(channel)
+
+        // channel.once('close', () => this.emit('close'))
+
+        // conn.getObservedAddrs = (callback) => callback(null, [ma])
+        console.log('WebRTCInitiator connected!')
+        callback(null, this.channels[intentId])
+      })
+    }
+
+    return this.channels[intentId]
+  }
+
+  incomingConnection (offer) {
+    console.log('WebRTCReciever:\tincoming ', offer, '\n id:', this._id.toString('hex'))
+    if (!offer) {
+      return
+    }
+
+    if (offer.answer) {
+      if (this.channels[offer.intentId] instanceof SimplePeer) {
+        this.channels[offer.intentId].signal(offer.signal)
+      }
+    } else {
+      this.channels[offer.intentId] = new SimplePeer({})
+      this.channels[offer.intentId].on('connect', () => {
+        console.log('WebRTCReciever: connected')
+        this.emit('connection', this.channels[offer.intentId])
+      })
+
+      this.channels[offer.intentId].on('signal', (signal) => {
+        offer.signal = signal
+        offer.answer = true
+        console.log('WebRTCReciever got Signal', offer, '\n id:', this._id.toString('hex'))
+        this.io.emit('ss-handshake', offer)
+      })
+
+      this.channels[offer.intentId].on('error', (err) => {
+        if (err) console.error('WebRTCReciever: Channel Error ', err)
+      })
+
+      console.log('WebRTCReciever signaling ....')
+      this.channels[offer.intentId].signal(offer.signal)
+    }
+  }
+
+  connect (peer, callback) {
+    callback = callback ? once(callback) : noop
+    const intentId = (~~(Math.random() * 1e9)).toString(36) + Date.now()
+
+    // const sioClient = this
+    //       .listenersRefs[Object.keys(this.listenersRefs)[0]].io
+    // const sioClient = this.io
+
+    // const spOptions = { initiator: true, trickle: false }
+    //
+    // // Use custom WebRTC implementation
+    // if (this.wrtc) { spOptions.wrtc = this.wrtc }
+    this.channels[intentId] = new SimplePeer({initiator: true})
+    let connected = false
+    this.channels[intentId].once('signal', (signal) => {
+      console.log('WebRTCInitiator:\tEmitting ss-handshake\n from:', this._id.toString('hex'),
+      '\nto: ', peer.id.toString('hex'), '\n signal: ', signal)
+      this.io.emit('ss-handshake', {
+        intentId: intentId,
+        fromId: this._id.toString('hex'),
+        toId: peer.id.toString('hex'),
+        signal: signal
+      })
+    })
+
+    this.channels[intentId].once('timeout', () => callback(new Error('timeout')))
+
+    this.channels[intentId].once('error', (err) => {
+      if (!connected) { callback(err) }
+    })
+
+    this.io.on('ws-handshake', incomingHandshake.bind(this))
+
+    function incomingHandshake (offer) {
+      console.log('WebRTCInitiator:\t incoming handshake ', offer)
+      if (offer.intentId === intentId && offer.err) {
+        return callback(new Error(offer.err))
+      }
+
+      if (offer.intentId !== intentId || !offer.answer) {
+        return
+      }
+
+      this.channels[intentId].on('connect', () => {
+        connected = true
+        // conn.destroy = channel.destroy.bind(channel)
+
+        // channel.once('close', () => this.emit('close'))
+
+        // conn.getObservedAddrs = (callback) => callback(null, [ma])
+        console.log('WebRTCInitiator connected!')
+        callback(null, this.channels[intentId])
+      })
+      console.log('WebRTCInitiator signaling ....')
+      this.channels[intentId].signal(offer.signal)
+    }
+    return this.channels[intentId]
+    // return this
   }
 
   listen (peer, callback) {
@@ -103,7 +254,8 @@ class WebRTCReciever extends EventEmitter {
       this.emit('close')
     })
 
-    this.io.on('ws-handshake', incomingConnction.bind(this))
+    // this.io.on('ws-handshake', incomingConnction.bind(this))
+    this.io.on('ws-handshake', this.incomingConnection.bind(this))
     this.io.on('ws-peer', this._peerDiscovered.bind(this))
     this.io.on('connect', () => {
       console.log('WebRTCReciever:\t on Connect, ourId: ', this._id.toString('hex'))
@@ -116,6 +268,7 @@ class WebRTCReciever extends EventEmitter {
     })
 
     function incomingConnction (offer) {
+      console.log('WebRTCReciever:\tincoming Connection ', offer, '\n id:', this._id.toString('hex'))
       if (offer.answer || offer.err) {
         return
       }
@@ -124,19 +277,29 @@ class WebRTCReciever extends EventEmitter {
 
       if (this.wrtc) { spOptions.wrtc = this.wrtc }
 
-      const channel = new SimplePeer(spOptions)
+      const channel = (this.channels[offer.intentId] instanceof SimplePeer) ? this.channels[offer.intentId] : new SimplePeer({})
+      // const channel = new SimplePeer({})
 
-      channel.once('connect', () => {
+      channel.on('connect', () => {
+        console.log('WebRTCReciever: connected')
         this.emit('connection', channel)
       })
 
       channel.once('signal', (signal) => {
         offer.signal = signal
         offer.answer = true
+        console.log('WebRTCReciever got Signal', offer, '\n id:', this._id.toString('hex'))
         this.io.emit('ss-handshake', offer)
       })
 
+      channel.on('error', (err) => {
+        if (err) console.error('WebRTCReciever: Channel Error ', err)
+      })
+
+      console.log('WebRTCReciever signaling ....')
       channel.signal(offer.signal)
+
+      this.channels[offer.intentId] = channel
     }
   }
 
@@ -152,6 +315,7 @@ class WebRTCReciever extends EventEmitter {
 
   _peerDiscovered (data) {
     console.log('WebRTCReciever:\tPeer Discovered: ', data.toString('hex'))
+    this.emit('peer:new', {id: data})
   }
 }
 

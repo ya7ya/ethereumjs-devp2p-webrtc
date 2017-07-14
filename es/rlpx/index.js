@@ -43,11 +43,25 @@ class RLPx extends EventEmitter {
 
     // internal
     // this._server = net.createServer()
-    this._server = new WebRTCReciever({id: this._id, trickle: false})
+    this._server = new WebRTCReciever({id: this._id})
     this._server.once('listening', () => this.emit('listening'))
     this._server.once('close', () => this.emit('close'))
     this._server.on('error', (err) => this.emit('error', err))
     this._server.on('connection', (socket) => this._onConnect(socket, null))
+
+    if (this._server instanceof WebRTCReciever) {
+      this._server.on('peer:new', (peer) => {
+        if (this._peersLRU.has(peer.id.toString('hex'))) return
+        this._peersLRU.set(peer.id.toString('hex'), true)
+
+        if (this._getOpenSlots() > 0) return this._connectToPeer(peer)
+        this._peersQueue.push({ peer: peer, ts: 0 }) // save to queue
+      })
+      this._server.on('peer:removed', (peer) => {
+        // remove from queue
+        this._peersQueue = this._peersQueue.filter((item) => !item.peer.id.equals(peer.id))
+      })
+    }
 
     this._peers = new Map()
     this._peersQueue = []
@@ -90,7 +104,9 @@ class RLPx extends EventEmitter {
     const deferred = createDeferred()
 
     // const socket = new net.Socket()
-    const socket = new WebRTCInitiator({initiator: true, id: this._id, trickle: false})
+    // const socket = new WebRTCInitiator({initiator: true, id: this._id})
+    const socket = this._server.socket()
+    
     this._peers.set(peerKey, socket)
     socket.once('close', () => {
       this._peers.delete(peerKey)
@@ -103,6 +119,7 @@ class RLPx extends EventEmitter {
     socket.connect(peer, deferred.resolve)
 
     await deferred.promise
+    console.log('rlpx:\t Triggering _onConnect, socket:', socket, '\n peerid:', peer.id.toString('hex'))
     this._onConnect(socket, peer.id)
   }
 
