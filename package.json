@@ -53,7 +53,8 @@
     "rlp-encoding": "^3.0.0",
     "secp256k1": "^3.1.0",
     "simple-peer": "^8.1.1",
-    "socket.io-client": "^2.0.3"
+    "socket.io-client": "^2.0.3",
+    "electron-webrtc": "^0.3.0"
   },
   "devDependencies": {
     "babel-cli": "^6.16.0",

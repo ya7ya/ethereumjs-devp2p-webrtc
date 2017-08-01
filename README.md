@@ -1,4 +1,8 @@
-# ethereumjs-devp2p
+# ethereumjs-devp2p + WebRTC
+
+this project replaces the `TCP` HTTP Server in `RLPx` with a WebRTC implementation.
+
+the WebRTC websocket signaling server used can be found in [js-libp2p-webrtc-star](https://github.com/libp2p/js-libp2p-webrtc-star)
 
 [![NPM Package](https://img.shields.io/npm/v/ethereumjs-devp2p.svg?style=flat-square)](https://www.npmjs.org/package/ethereumjs-devp2p)
 
