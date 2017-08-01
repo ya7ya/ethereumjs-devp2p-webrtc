@@ -1,5 +1,5 @@
 // const net = require('net')
-const { WebRTCInitiator, WebRTCReciever } = require('../wrtc')
+const { WebRTCTCP } = require('../wrtc')
 const wrtc = require('electron-webrtc')()
 const secp256k1 = require('secp256k1')
 const { EventEmitter } = require('events')
@@ -44,7 +44,10 @@ class RLPx extends EventEmitter {
 
     // internal
     // this._server = net.createServer()
-    this._server = new WebRTCReciever({id: this._id, wrtc: wrtc})
+    this._server = new WebRTCTCP({
+      id: this._id,
+      wrtc: wrtc
+    })
     this._server.once('listening', () => this.emit('listening'))
     this._server.once('close', () => this.emit('close'))
     this._server.on('error', (err) => this.emit('error', err))
