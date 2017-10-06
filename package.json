@@ -1,7 +1,7 @@
 {
   "name": "ethereumjs-devp2p-webrtc",
   "version": "2.1.2",
-  "description": "A WebRTC JavaScript implementation of ÐΞVp2p, based on ethereumjs-devp2p",
+  "description": "A WebRTC JavaScript implementation of ÐΞVp2p (RLPx only), based on ethereumjs-devp2p",
   "keywords": [
     "ethereum",
     "p2p",
@@ -21,7 +21,7 @@
     "Alex Beregszaszi <alex@rtfs.hu>",
     "Kirill Fomichev <fanatid@ya.ru> (https://github.com/fanatid)",
     "Martin Becze <mb@ethdev.com>",
-    "Yahya <ya7yaz@gmail.com>"
+    "Yahya <ya7yaz@gmail.com> (https://github.com/ya7ya)"
   ],
   "files": [
     "es",
