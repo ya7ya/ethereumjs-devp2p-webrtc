@@ -22,6 +22,7 @@ class WebRTCTCP extends EventEmitter {
     this._id = options.id || null
     this.wrtc = options.wrtc || null
     this.channels = {}
+    this.sioUrl = options.starUrl || 'http://localhost:9090/'
     // const sioUrl = 'http://localhost:9090/' // the socket io star server.
 
     // this.io = io.connect(sioUrl, sioOptions)
@@ -167,9 +168,10 @@ class WebRTCTCP extends EventEmitter {
     callback = callback ? once(callback) : noop
 
     this._id = peer.id
-    const sioUrl = 'http://localhost:9090/' // the socket io star server.
-
-    this.io = io.connect(sioUrl, sioOptions)
+    // const sioUrl = 'http://localhost:9090/' // the socket io star server.
+    // const sioUrl = 'https://star.ftl.sh/' // the socket io star server.
+    console.log('connecting to ', this.sioUrl)
+    this.io = io.connect(this.sioUrl, sioOptions)
 
     this.io.once('connect_error', callback)
     this.io.once('error', (err) => {

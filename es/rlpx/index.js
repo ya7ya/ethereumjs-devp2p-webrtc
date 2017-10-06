@@ -46,7 +46,8 @@ class RLPx extends EventEmitter {
     // this._server = net.createServer()
     this._server = new WebRTCTCP({
       id: this._id,
-      wrtc: wrtc
+      wrtc: wrtc,
+      starUrl: options.starUrl || 'https://star.ftl.sh'
     })
     this._server.once('listening', () => this.emit('listening'))
     this._server.once('close', () => this.emit('close'))
