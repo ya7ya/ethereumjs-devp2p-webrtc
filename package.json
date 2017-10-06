@@ -1,7 +1,7 @@
 {
-  "name": "ethereumjs-devp2p",
-  "version": "2.1.1",
-  "description": "A JavaScript implementation of ÐΞVp2p",
+  "name": "ethereumjs-devp2p-webrtc",
+  "version": "2.1.2",
+  "description": "A WebRTC JavaScript implementation of ÐΞVp2p, based on ethereumjs-devp2p",
   "keywords": [
     "ethereum",
     "p2p",
@@ -12,15 +12,16 @@
     "eth62",
     "eth63"
   ],
-  "homepage": "https://github.com/fanatid/ethereumjs-devp2p",
+  "homepage": "https://github.com/ya7ya/ethereumjs-devp2p-webrtc",
   "bugs": {
-    "url": "https://github.com/fanatid/ethereumjs-devp2p/issues"
+    "url": "https://github.com/ya7ya/ethereumjs-devp2p-webrtc/issues"
   },
   "license": "MIT",
   "contributors": [
     "Alex Beregszaszi <alex@rtfs.hu>",
     "Kirill Fomichev <fanatid@ya.ru> (https://github.com/fanatid)",
-    "Martin Becze <mb@ethdev.com>"
+    "Martin Becze <mb@ethdev.com>",
+    "Yahya <ya7yaz@gmail.com>"
   ],
   "files": [
     "es",
@@ -29,7 +30,7 @@
   "main": "./lib/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fanatid/ethereumjs-devp2p.git"
+    "url": "https://github.com/ya7ya/ethereumjs-devp2p-webrtc.git"
   },
   "scripts": {
     "build": "babel es -d lib",
